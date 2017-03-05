@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using GOLCore;
+using Microsoft.Extensions.CommandLineUtils;
 
 namespace ConsoleApplication
 {
@@ -10,28 +11,80 @@ namespace ConsoleApplication
         
         public static void Main(string[] args)
         {
+            // Output configuration
             Console.OutputEncoding = System.Text.Encoding.UTF8;
+
+            // Cli argument parsing configuration
+            var cliApp = new CommandLineApplication(throwOnUnexpectedArg:false);
+            var pathOption = cliApp.Option(
+                "-i|--input-path",
+                "Path to an image file to be used as starting world configuration",
+                CommandOptionType.SingleValue);
+            var cycleDelayOption = cliApp.Option(
+                "-c|--cycle-delay",
+                "Define the delay in millisecond between each cycle",
+                CommandOptionType.SingleValue);
+            cliApp.HelpOption("-?|-h|--help");
+
+            cliApp.OnExecute(()=> {
+                var cycleDelay = 750;
+                var input = new bool[] {
+                        false, false, false, false, false, false,
+                        false, false, true, false, false, false,
+                        false, true, false, true, false, false,
+                        false, true, false, true, false, false,
+                        false, false, false, false, false, false,
+                        false, false, false, false, false, false};
+                try{
+                    if(pathOption.HasValue()) {
+                        try{
+                            input = WorldConverter.FromImage(pathOption.Value());
+                        }
+                        catch(Exception e) {
+                            throw new ArgumentException("! Specified path is either invalid or file isn't bitmap", e);
+                        }
+                    } 
+                    else
+                        throw new ArgumentException(String.Format("! You may want to specify a starting configuration."));
+
+                    if(cycleDelayOption.HasValue()) {
+                        int delayValue;
+                        if(int.TryParse(cycleDelayOption.Value(), out delayValue))
+                            cycleDelay = delayValue;
+                        else {
+                            throw new ArgumentException(String.Format("! Specified delay is invalid, defaulting to {0}ms.", cycleDelay));
+                        }
+                    }
+                }
+                catch(Exception e) {
+                    Console.Write(" " + e.Message);
+                    cliApp.ShowHelp();
+                }
+                
+                var cycleCount = Play(input, cycleDelay);
+                Console.WriteLine("This population configuration survived for " + cycleCount + " cycles.");
+
+                return 0;
+            });
+            cliApp.Execute(args);
+        }
+
+        private static int Play(bool[] initState, int cycleDelay) {
             var cycleCount = 0;
+            var world = World.Initialize(initState);
 
             displayOrigin = new Point(Console.CursorLeft, Console.CursorTop);
-            var input = new bool[] {
-                false, false, false, false, false, false,
-                false, false, true, false, false, false,
-                false, true, false, true, false, false,
-                false, true, false, true, false, false,
-                false, false, false, false, false, false,
-                false, false, false, false, false, false,
-            };
-            var world = World.Initialize(input);
             DisplayWorld(world);
+            
             do {
                 world.Cycle();
-                Thread.Sleep(750);
+                cycleCount++;
+                Thread.Sleep(cycleDelay);
                 DisplayWorld(world);
-                cycleCount++;   
             }
             while(world.AliveCellCount > 0);
-            Console.WriteLine("This population configuration survived for " + cycleCount + " cycles.");
+
+            return cycleCount;
         }
 
         private static void DisplayWorld(World world) {

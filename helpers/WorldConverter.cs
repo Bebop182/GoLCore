@@ -2,22 +2,23 @@ using System;
 using System.Drawing;
 
 namespace GOLCore {
-    public class WorldConverter {
-        public static bool[] FromBitmap(string path) {
+    public static class WorldConverter {
+        public static World FromBitmap(string path) {
             var image = new Bitmap(path);
 
             var worldState = new bool[image.Width*image.Height];
-            for(int y=0; y<image.Height; y++) {
-                for(int x=0; x<image.Width; x++) {
+            for(int y=0, i=0; y<image.Height; y++) {
+                for(int x=0; x<image.Width; x++, i++) {
                     var pixel = image.GetPixel(x, y);
-                    worldState[x+y*image.Height] = !IsDark(pixel);
+                    worldState[i] = pixel.IsDark();
                 }
             }
-            
-            return worldState;
+            var world = World.Initialize(worldState, image.Width, image.Height);
+            image.Dispose();
+            return world;
         }
 
-        private static bool IsDark(Color color, int threshold = 50) {
+        public static bool IsDark(this Color color, int threshold = 50) {
             var r = Convert.ToInt32(color.R);
             var g = Convert.ToInt32(color.G);
             var b = Convert.ToInt32(color.B);

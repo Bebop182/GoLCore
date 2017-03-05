@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Threading;
-using GOLCore;
 using Microsoft.Extensions.CommandLineUtils;
 
-namespace ConsoleApplication
-{
+namespace GOLCore {
     public class Program
     {
         private static Point displayOrigin;
@@ -38,7 +36,7 @@ namespace ConsoleApplication
                 try{
                     if(pathOption.HasValue()) {
                         try{
-                            input = WorldConverter.FromImage(pathOption.Value());
+                            input = WorldConverter.FromBitmap(pathOption.Value());
                         }
                         catch(Exception e) {
                             throw new ArgumentException("! Specified path is either invalid or file isn't bitmap", e);
@@ -62,7 +60,7 @@ namespace ConsoleApplication
                 }
                 
                 var cycleCount = Play(input, cycleDelay);
-                Console.WriteLine("This population configuration survived for " + cycleCount + " cycles.");
+                Console.WriteLine("This population configuration survived for {0} cycles.", cycleCount);
 
                 return 0;
             });
@@ -102,13 +100,6 @@ namespace ConsoleApplication
             Console.WriteLine();
         }
 
-        private struct Point {
-            public int X;
-            public int Y;
-            public Point(int x, int y) {
-                X = x;
-                Y = y;
-            }
-        }
+        
     }
 }

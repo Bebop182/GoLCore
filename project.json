@@ -4,12 +4,11 @@
     "debugType": "portable",
     "emitEntryPoint": true
   },
-
   "dependencies": {
     "CoreCompat.System.Drawing": "1.0.0-beta006",
-    "Microsoft.Extensions.CommandLineUtils": "1.1.0"
+    "Microsoft.Extensions.CommandLineUtils": "1.1.0",
+    "Microsoft.Extensions.Configuration": "1.1.0"
   },
-
   "frameworks": {
     "netcoreapp1.1": {
       "dependencies": {
@@ -19,7 +18,6 @@
       }
     }
   },
-  
   "runtimes": {
     "win7-x64": {}
   }

@@ -1,49 +1,72 @@
+using System;
+using System.Collections.Generic;
+
 namespace GOLCore {
     public class Cell {
         public static int ChangedStateCount {get; set;}
-        
+
         public bool IsAlive {get; private set;}
-        public bool StateChanged {get; private set;}
+        private Queue<bool> _stagedStates;
+        public bool StagedState {
+            get {
+                return _stagedStates.Count > 0 ? _stagedStates.Peek() : IsAlive;
+            }
+            private set {
+                if(IsAlive != value)
+                    _stagedStates.Enqueue(value);
+            }
+        }
+        public bool StateChanged => !IsAlive.Equals(StagedState);
 
         static Cell() {
             // Load configurations
             ChangedStateCount = 0;
         }
 
-        public Cell(bool initState = false) {
+        public Cell(bool initState = false)
+        {
+            _stagedStates = new Queue<bool>();
             IsAlive = initState;
-            StateChanged = false;
         }
 
-        public void OnCycle(CellCycleContext cellContext) {
-            StateChanged = true;
+        public void ProcessCycle(CellCycleContext cellContext) {
             ChangedStateCount++;
 
             //Birth conditions
             if(!IsAlive) {
                 if(cellContext.neighborCount == 3) {
-                    IsAlive = true;
+                    StagedState = true;
                     return;
                 }
             }
             else {
                 //Death conditions
                 if(cellContext.neighborCount > 3){
-                    IsAlive = false;
+                    StagedState = false;
                     return;
                 }
                 if(cellContext.neighborCount <= 1){
-                    IsAlive = false;
+                    StagedState = false;
                     return;
                 }
             }
             
             ChangedStateCount--;
-            StateChanged = false;
+        }
+
+        public void CommitStateChange(bool commitAll = false) {
+            if(_stagedStates.Count <= 0) return;
+            IsAlive = _stagedStates.Dequeue();
+            if(commitAll)
+                CommitStateChange(true);
+        }
+
+        public void AbordStateChange() {
+            _stagedStates.Clear();
         }
     }
 
-    public class CellCycleContext {
+    public class CellCycleContext : EventArgs {
         public int neighborCount {get; set;}
     }
 }

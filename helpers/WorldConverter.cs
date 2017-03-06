@@ -5,16 +5,18 @@ namespace GOLCore {
     public static class WorldConverter {
         public static World FromBitmap(string path) {
             var image = new Bitmap(path);
-
             var worldState = new bool[image.Width*image.Height];
+
             for(int y=0, i=0; y<image.Height; y++) {
                 for(int x=0; x<image.Width; x++, i++) {
                     var pixel = image.GetPixel(x, y);
                     worldState[i] = pixel.IsDark();
                 }
             }
-            var world = World.Initialize(worldState, image.Width, image.Height);
+
+            var world = new World(worldState, image.Width, image.Height);
             image.Dispose();
+            
             return world;
         }
 

@@ -112,11 +112,11 @@ namespace GOLCore {
 
         private static int Play(World world, int cycleDelay) {
             var cycleCount = 0;
-            var finalDelay = Math.Max(cycleDelay-300, 0);
 
+            var finalDelay = Math.Max(cycleDelay, 0);
             do {
                 world.WaitFor(finalDelay)
-                    .Display('O', ' ')
+                    .Display()
                     .Jump(3);
                 world.Cycle();
                 cycleCount++;

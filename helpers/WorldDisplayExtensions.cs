@@ -11,6 +11,7 @@ namespace GOLCore {
 
         public static World Display(this World world, char aliveSymbol, char deadSymbol) {
             Console.SetCursorPosition(displayOrigin.X, displayOrigin.Y);
+            var backgroundColor = Console.BackgroundColor;
 
             for(int i=0; i<world.MaxPopulation; i++) {
                 var cell = world.Grid[i];
@@ -24,11 +25,16 @@ namespace GOLCore {
                 //     cell.IsAlive
                 //     ? cell.StateChanged ? aliveSymbol : DEFAULT_ALIVE_SYMBOL
                 //     : cell.StateChanged ? deadSymbol : DEFAULT_DEAD_SYMBOL);
-                Console.Write(
-                    cell.IsAlive
-                    ? aliveSymbol
-                    : deadSymbol);
+                // Console.Write(
+                //     cell.IsAlive
+                //     ? aliveSymbol
+                //     : deadSymbol);
+                Console.BackgroundColor = cell.IsAlive
+                    ? ConsoleColor.White
+                    : ConsoleColor.Black;
+                Console.Write(' ');
             }
+            Console.BackgroundColor = backgroundColor;
             return world;
         }
 

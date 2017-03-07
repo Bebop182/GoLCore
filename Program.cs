@@ -112,22 +112,15 @@ namespace GOLCore {
 
         private static int Play(World world, int cycleDelay) {
             var cycleCount = 0;
-
+            var finalDelay = Math.Max(cycleDelay, 0);
             do {
+                world.WaitFor(finalDelay)
+                    .Display('\u25A0', ' ')
+                    .Jump(3);
                 world.Cycle();
                 cycleCount++;
-                world.WaitFor(cycleDelay-300)
-                    .Display(' ', '#')
-                    .WaitFor(100)
-                    .Display('o', '#')
-                    .WaitFor(200)
-                    .Display('O', '#')
-                    .Jump(3);
                 world.TriggerCommitCycle();
             } while(world.Population > 0 && Cell.ChangedStateCount > 0);
-
-            world.Display('O', '#')
-                .Jump(3);
 
             return cycleCount;
         }

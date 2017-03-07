@@ -10,7 +10,7 @@ namespace GOLCore {
             for(int y=0, i=0; y<image.Height; y++) {
                 for(int x=0; x<image.Width; x++, i++) {
                     var pixel = image.GetPixel(x, y);
-                    worldState[i] = pixel.IsDark();
+                    worldState[i] = !pixel.IsDark();
                 }
             }
 

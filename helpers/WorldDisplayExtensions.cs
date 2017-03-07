@@ -3,7 +3,7 @@ using System.Threading;
 
 namespace GOLCore {
     public static class WorldDisplayExtensions {
-        private static Point displayOrigin;
+        private static readonly Point displayOrigin;
 
         static WorldDisplayExtensions() {
             displayOrigin = new Point(Console.CursorLeft, Console.CursorTop);
@@ -14,7 +14,7 @@ namespace GOLCore {
             var backgroundColor = Console.BackgroundColor;
 
             for(int i=0; i<world.MaxPopulation; i++) {
-                var cell = world.Grid[i];
+                var cell = world.CellGrid[i];
                 
                 if(i % world.XResolution == 0) {
                     Console.CursorTop++;

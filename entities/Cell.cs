@@ -4,16 +4,16 @@ using System.Collections.Generic;
 namespace GOLCore {
     public class Cell {
         public static int ChangedStateCount {get; set;}
-
+        private readonly Queue<bool> _stagedStates;
+        
         public bool IsAlive {get; private set;}
-        private Queue<bool> _stagedStates;
         public bool StagedState {
             get {
                 return _stagedStates.Count > 0 ? _stagedStates.Peek() : IsAlive;
             }
             private set {
-                if(IsAlive != value)
-                    _stagedStates.Enqueue(value);
+                if(IsAlive == value) return;
+                _stagedStates.Enqueue(value);
             }
         }
         public bool StateChanged => !IsAlive.Equals(StagedState);
@@ -56,9 +56,10 @@ namespace GOLCore {
 
         public void CommitStateChange(bool commitAll = false) {
             if(_stagedStates.Count <= 0) return;
+
             IsAlive = _stagedStates.Dequeue();
             if(commitAll)
-                CommitStateChange(true);
+                CommitStateChange(commitAll:true);
         }
 
         public void AbordStateChange() {

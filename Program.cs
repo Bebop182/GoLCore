@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Microsoft.Extensions.CommandLineUtils;
 
 namespace GOLCore {
-    //todo: refactor console output cell animations
     //todo: write/load all settings to/from a config file
     //todo: add interactivity to a world cycle
     //todo: i18n
@@ -87,20 +86,13 @@ namespace GOLCore {
                             false, true, false, true, false, false,
                             false, true, false, true, false, false,
                             false, false, false, false, false, false};
-                        // var input = new bool[] {
-                        //     false, false, false, false, false, false,
-                        //     false, false, true, false, false, false,
-                        //     false, false, true, false, false, false,
-                        //     false, false, true, false, false, false,
-                        //     false, false, false, false, false, false,
-                        //     false, false, false, false, false, false};
                         world = new World(input);
                     }
                 }
                 
                 var cycleCount = Play(world, cycleDelay);
                 Console.WriteLine("This population configuration survived for {0} cycles.", cycleCount);
-                if(world.Population > 0)
+                if(world.CurrentPopulation > 0)
                     Console.WriteLine("Although some subsist, they will stagnate forever.");
 
                 return 0;
@@ -112,16 +104,17 @@ namespace GOLCore {
 
         private static int Play(World world, int cycleDelay) {
             var cycleCount = 0;
-
             var finalDelay = Math.Max(cycleDelay, 0);
+            world.Display();
+            
             do {
-                world.WaitFor(finalDelay)
-                    .Display()
-                    .Jump(3);
                 world.Cycle();
                 cycleCount++;
                 world.TriggerCommitCycle();
-            } while(world.Population > 0 && Cell.ChangedStateCount > 0);
+                world.WaitFor(finalDelay)
+                    .Display()
+                    .Jump(3);
+            } while(world.CurrentPopulation > 0 && Cell.ChangedStateCount > 0);
 
             return cycleCount;
         }

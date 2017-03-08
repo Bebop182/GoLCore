@@ -26,7 +26,7 @@ namespace GOLCore {
             return world;
         }
 
-        public static void ToBitmap(this World world, string path, ImageFormat format) {
+        public static Bitmap ToBitmap(this World world, string path, ImageFormat format) {
             var image = new Bitmap(world.XResolution, world.YResolution);
             for(int y=0, i=0; y<image.Height; y++) {
                 for(int x=0; x<image.Width; x++, i++) {
@@ -37,6 +37,7 @@ namespace GOLCore {
             using(var fs = new FileStream(fullPath, FileMode.OpenOrCreate)) {
                 image.Save(fs, format);
             }
+            return image;
         }
 
         public static bool IsDark(this Color color, int threshold = 50) {

@@ -10,8 +10,24 @@ namespace GOLCore {
         }
 
         public static World Display(this World world) {
+            //var backgroundColor = Console.BackgroundColor;
+
+            world.Print(c=> {
+                // Console.BackgroundColor = c.IsAlive
+                // ? ConsoleColor.White
+                // : ConsoleColor.Black;
+                var symbol = c.IsAlive
+                ? 'O'
+                : ' ';
+                Console.Write(symbol);
+            });
+
+            //Console.BackgroundColor = backgroundColor;
+            return world;
+        }
+
+        public static void Print(this World world, Action<Cell> printCell) {
             Console.SetCursorPosition(displayOrigin.X, displayOrigin.Y);
-            var backgroundColor = Console.BackgroundColor;
 
             for(int i=0; i<world.MaxPopulation; i++) {
                 var cell = world.CellGrid[i];
@@ -20,13 +36,15 @@ namespace GOLCore {
                     Console.CursorTop++;
                     Console.CursorLeft = displayOrigin.X;
                 }
-
-                Console.BackgroundColor = cell.IsAlive
-                    ? ConsoleColor.White
-                    : ConsoleColor.Black;
-                Console.Write(' ');
+                printCell?.Invoke(cell);
             }
-            Console.BackgroundColor = backgroundColor;
+        }
+
+        public static World ShowEndScreen(this World world) {
+            world.Print(c=>{
+                Console.Write('#');
+                Thread.Sleep(10);
+            });
             return world;
         }
 

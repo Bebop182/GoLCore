@@ -44,6 +44,8 @@ namespace GOLCore {
                 CommandOptionType.NoValue);
             cliApp.HelpOption("-?|-h|--help");
 
+            var playCommand = cliApp.Command("play", (command)=>{Console.Write("Hello !");}, throwOnUnexpectedArg:false);
+
             // Cli execution
             cliApp.OnExecute(()=> {
                 World world = null;
@@ -101,20 +103,21 @@ namespace GOLCore {
 
             Console.CursorVisible = false;
         }
-
+        
         private static int Play(World world, int cycleDelay) {
             var cycleCount = 0;
             var finalDelay = Math.Max(cycleDelay, 0);
-            world.Display();
-            
+            //world.Display();
             do {
                 world.Cycle();
-                cycleCount++;
-                world.TriggerCommitCycle();
                 world.WaitFor(finalDelay)
                     .Display()
                     .Jump(3);
+                Console.WriteLine("Cycle n°" + ++cycleCount);
+                world.TriggerCommitCycle();
             } while(world.CurrentPopulation > 0 && Cell.ChangedStateCount > 0);
+            world.ShowEndScreen()
+                .Jump(3);
 
             return cycleCount;
         }

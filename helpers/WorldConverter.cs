@@ -3,14 +3,10 @@ using System.IO;
 using System.Drawing;
 using System.Drawing.Imaging;
 
-namespace GOLCore {
+namespace GOLCore
+{
     public static class WorldConverter {
-        public static World FromBitmap(string path) {
-            var fullPath = Path.GetFullPath(path);
-            Bitmap image = null;
-            using(var fs = new FileStream(fullPath, FileMode.Open)) {
-                image = new Bitmap(fs);
-            }
+        public static World FromBitmap(Bitmap image) {
             var worldState = new bool[image.Width*image.Height];
 
             for(int y=0, i=0; y<image.Height; y++) {
@@ -26,16 +22,21 @@ namespace GOLCore {
             return world;
         }
 
-        public static Bitmap ToBitmap(this World world, string path, ImageFormat format) {
+        public static World FromBitmap(string path) {
+            var fullPath = Path.GetFullPath(path);
+            Bitmap image = null;
+            using(var fs = new FileStream(fullPath, FileMode.Open)) {
+                image = new Bitmap(fs);
+            }
+            return FromBitmap(image);
+        }
+
+        public static Bitmap ToBitmap(this World world) {
             var image = new Bitmap(world.XResolution, world.YResolution);
             for(int y=0, i=0; y<image.Height; y++) {
                 for(int x=0; x<image.Width; x++, i++) {
                     image.SetPixel(x, y, world.CellGrid[i].IsAlive ? Color.White : Color.Black);
                 }
-            }
-            var fullPath = Path.GetFullPath(path);
-            using(var fs = new FileStream(fullPath, FileMode.OpenOrCreate)) {
-                image.Save(fs, format);
             }
             return image;
         }
@@ -46,6 +47,25 @@ namespace GOLCore {
             var b = Convert.ToInt32(color.B);
             
             return r<threshold && g<threshold && b<threshold;
+        }
+
+        public static ImageFormat GetImageFormat(string path) {
+            // Check provided path extension to figure out ImageFormat
+            // return Png by default
+            var fullPath = Path.GetFullPath(path);
+            var isFile = Path.HasExtension(fullPath);
+
+            ImageFormat format = ImageFormat.Png;
+            if(!isFile) return format;
+            try {
+                var imageFormatConverter = new ImageFormatConverter();
+                var ext = Path.GetExtension(fullPath).TrimStart('.');
+                format = (ImageFormat)imageFormatConverter.ConvertFromString(ext);
+            }
+            catch(Exception) {
+                Console.WriteLine("! Desired image format defaulting to " + format);
+            }
+            return format;
         }
     }
 }

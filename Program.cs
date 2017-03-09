@@ -1,9 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.IO;
 using Microsoft.Extensions.CommandLineUtils;
 
 namespace GOLCore {
     //todo: write/load all settings to/from a config file
+    //todo: error handling
     //todo: add interactivity to a world cycle
     //todo: i18n
 
@@ -18,8 +19,16 @@ namespace GOLCore {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
             Console.CursorVisible = false;
 
+            var cliApp = ConfigureApplication();
+            
+            cliApp.Execute(args);
+        }
+
+        private static CommandLineApplication ConfigureApplication() {
             // Application settings
-            var cycleDelay = 750;
+            var cycleDelay = 500;
+            var maxCycle = 10000;
+            var displayMargin = 2;
 
             // Cli argument parsing configuration
             var cliApp = new CommandLineApplication(throwOnUnexpectedArg:false) {
@@ -30,96 +39,111 @@ namespace GOLCore {
                 + "and watch it expand or die\nAuthor: Bebop182"};
             
             // Cli options declaration
-            var pathOption = cliApp.Option(
-                "-i|--input-path",
-                "Path to an image file to be used as starting world configuration",
-                CommandOptionType.SingleValue);
-            var cycleDelayOption = cliApp.Option(
-                "-d|--delay",
-                "Define the delay in millisecond between each cycle",
-                CommandOptionType.SingleValue);
-            var clearOption = cliApp.Option(
-                "-c|--clear",
-                "Clear console output to only display world",
-                CommandOptionType.NoValue);
             cliApp.HelpOption("-?|-h|--help");
 
-            var playCommand = cliApp.Command("play", (command)=>{Console.Write("Hello !");}, throwOnUnexpectedArg:false);
+            var playCommand = cliApp.Command("play", (command)=>{
+                // Command initialization
+                command.Description = "Run a game of life from an image file.";
+                #region Command options
+                var inputPathArgument = command.Argument(
+                    "Input path",
+                    "Path to an image file to be used as starting world configuration",
+                    multipleValues:false);
+                var outputPathOption = command.Option(
+                    "-o|--output-path",
+                    "Path to the desired save location of the output image",
+                    CommandOptionType.SingleValue);
+                var cycleDelayOption = command.Option(
+                    "-d|--delay",
+                    "Define the delay in millisecond between each cycle",
+                    CommandOptionType.SingleValue);
+                var maxCycleOption = command.Option(
+                    "-m|--max-cycle",
+                    "Define the limit of cycle to process",
+                    CommandOptionType.SingleValue);
+                var silentOption = command.Option(
+                    "-s|--silent",
+                    "Disable world output to display and ignore cycle delay option",
+                    CommandOptionType.NoValue);
+                var clearOption = command.Option(
+                    "-c|--clear",
+                    "Clear console output to only display world",
+                    CommandOptionType.NoValue);
+                #endregion
+                
+                command.OnExecute(() => {
+                    // Check input path
+                    var inputPath = Path.GetFullPath(inputPathArgument.Value);
+                    // Initialize world
+                    var world = WorldConverter.FromBitmap(inputPath);
+                    // Check configuration
+                    var silent = silentOption.HasValue();
+                    if(!silent && cycleDelayOption.HasValue())
+                        cycleDelay = int.Parse(cycleDelayOption.Value());
+                    if(maxCycleOption.HasValue())
+                        maxCycle = int.Parse(maxCycleOption.Value());
+
+                    if(clearOption.HasValue())
+                        Console.Clear();
+                    // Cycle logic
+                    var cycleCount = 0;
+                    do {
+                        if(!silent) {
+                            world.WaitFor(cycleDelay)
+                                .Display()
+                                .Jump(displayMargin);
+                            Console.WriteLine("Cycle n°{0}", cycleCount+1);
+                        }
+                        world.Cycle();
+                        world.TriggerCommitCycle();
+                        cycleCount++;
+                    } while(world.CurrentPopulation > 0 && Cell.ChangedStateCount > 0 && cycleCount < maxCycle);
+
+                    if(!silent) {
+                        world.ShowEndScreen()
+                            .Jump(displayMargin);
+                    }
+
+                    if(cycleCount == maxCycle)
+                        Console.WriteLine("This population configuration still holds {0} individuals after {1} cycles.", world.CurrentPopulation, cycleCount);
+                    else {
+                        Console.WriteLine("This population configuration survived for {0} cycles.", cycleCount);
+                        if(world.CurrentPopulation > 0)
+                            Console.WriteLine("Although some subsist, they will stagnate forever.");
+                    }
+
+                    // If provided output result to path
+                    if(outputPathOption.HasValue()) {
+                        // todo: Figure out format from path
+                        var outputPath = Path.GetFullPath(outputPathOption.Value());
+                        var parentDirectory = Path.GetDirectoryName(outputPath);
+
+                        var fileName = Path.GetFileName(outputPath);
+                        var format = WorldConverter.GetImageFormat(outputPath);
+                        
+                        if(fileName == string.Empty) 
+                            fileName = "golCore_output";
+
+                        fileName = Path.ChangeExtension(fileName, format.ToString().ToLower());
+                        outputPath = Path.Combine(parentDirectory, fileName);
+                        
+                        using(var fs = new FileStream(outputPath, FileMode.OpenOrCreate)) {
+                            var image = world.ToBitmap();
+                            image.Save(fs, format);
+                        }
+                    }
+
+                    return 0;
+                });
+            }, throwOnUnexpectedArg:false);
 
             // Cli execution
             cliApp.OnExecute(()=> {
-                World world = null;
-                var warnings = new List<Exception>();
-                try {
-                    if(clearOption.HasValue())
-                        Console.Clear();
-
-                    if(cycleDelayOption.HasValue()) {
-                        int delayValue;
-                        if(int.TryParse(cycleDelayOption.Value(), out delayValue))
-                            cycleDelay = delayValue;
-                        else warnings.Add(new ArgumentException(String.Format("! Specified delay is invalid, defaulting to {0}ms.", cycleDelay)));
-                    }
-
-                    if(pathOption.HasValue()) {
-                        try {
-                            world = WorldConverter.FromBitmap(pathOption.Value());
-                        }
-                        catch (Exception e) {
-                            warnings.Add(new ArgumentException("! Specified path is either invalid or file isn't bitmap", e));
-                        }
-                    } 
-                    else throw new ArgumentException("! You may want to specify a starting configuration.");
-                }
-                catch(Exception e) {
-                    Console.WriteLine(e.Message);
-                    foreach(var exception in warnings) {
-                        Console.WriteLine(exception.Message);
-                    }
-                    Console.WriteLine();
-                    cliApp.ShowHelp();
-                    
-                    if(world == null) {
-                        // Initialize with default configuration
-                        var input = new bool[] {
-                            false, false, false, false, false, false,
-                            false, false, true, false, false, false,
-                            false, true, true, true, false, false,
-                            false, true, false, true, false, false,
-                            false, true, false, true, false, false,
-                            false, false, false, false, false, false};
-                        world = new World(input);
-                    }
-                }
-                
-                var cycleCount = Play(world, cycleDelay);
-                Console.WriteLine("This population configuration survived for {0} cycles.", cycleCount);
-                if(world.CurrentPopulation > 0)
-                    Console.WriteLine("Although some subsist, they will stagnate forever.");
-
+                playCommand.ShowHelp();
                 return 0;
             });
-            cliApp.Execute(args);
 
-            Console.CursorVisible = false;
-        }
-        
-        private static int Play(World world, int cycleDelay) {
-            var cycleCount = 0;
-            var finalDelay = Math.Max(cycleDelay, 0);
-            //world.Display();
-            do {
-                world.Cycle();
-                world.WaitFor(finalDelay)
-                    .Display()
-                    .Jump(3);
-                Console.WriteLine("Cycle n°" + ++cycleCount);
-                world.TriggerCommitCycle();
-            } while(world.CurrentPopulation > 0 && Cell.ChangedStateCount > 0);
-            world.ShowEndScreen()
-                .Jump(3);
-
-            return cycleCount;
+            return cliApp;
         }
     }
 }

@@ -10,19 +10,9 @@ namespace GOLCore {
         }
 
         public static World Display(this World world) {
-            //var backgroundColor = Console.BackgroundColor;
-
             world.Print(c=> {
-                // Console.BackgroundColor = c.IsAlive
-                // ? ConsoleColor.White
-                // : ConsoleColor.Black;
-                var symbol = c.IsAlive
-                ? 'O'
-                : ' ';
-                Console.Write(symbol);
+                Console.Write(c.IsAlive ? 'O' : ' ');
             });
-
-            //Console.BackgroundColor = backgroundColor;
             return world;
         }
 
@@ -43,7 +33,7 @@ namespace GOLCore {
         public static World ShowEndScreen(this World world) {
             world.Print(c=>{
                 Console.Write('#');
-                Thread.Sleep(10);
+                Thread.Sleep(8);
             });
             return world;
         }

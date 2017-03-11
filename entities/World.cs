@@ -7,6 +7,7 @@ namespace GOLCore {
     public class World {
         private EventHandler CommitCycle = delegate {};
 
+        public string Name {get; set;}
         public readonly ReadOnlyCollection<Cell> CellGrid;
         public readonly int XResolution;
         public readonly int YResolution;
@@ -14,6 +15,7 @@ namespace GOLCore {
         public int CurrentPopulation => CellGrid.Count(c=>c.IsAlive);
 
         public World(bool[] worldState, int width = 0, int height = 0) {
+            Name = String.Empty;
             XResolution = width > 0 ? width : (int)Math.Sqrt(worldState.Length);
             YResolution = height > 0 ? height : XResolution;
 

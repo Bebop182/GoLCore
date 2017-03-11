@@ -3,8 +3,9 @@ using System.IO;
 using Microsoft.Extensions.CommandLineUtils;
 
 namespace GOLCore {
-    //todo: write/load all settings to/from a config file
     //todo: error handling
+    //todo: Editor command
+    //todo: write/load all settings to/from a config file
     //todo: add interactivity to a world cycle
     //todo: i18n
 
@@ -27,8 +28,7 @@ namespace GOLCore {
         private static CommandLineApplication ConfigureApplication() {
             // Application settings
             var cycleDelay = 500;
-            var maxCycle = 10000;
-            var displayMargin = 2;
+            var maxCycle = 2000;
 
             // Cli argument parsing configuration
             var cliApp = new CommandLineApplication(throwOnUnexpectedArg:false) {
@@ -38,11 +38,11 @@ namespace GOLCore {
                 + "you can load up an image file as the starting configuration "
                 + "and watch it expand or die\nAuthor: Bebop182"};
             
-            // Cli options declaration
+            // Cli main options declaration
             cliApp.HelpOption("-?|-h|--help");
 
+            // Cli commands declaration
             var playCommand = cliApp.Command("play", (command)=>{
-                // Command initialization
                 command.Description = "Run a game of life from an image file.";
                 #region Command options
                 var inputPathArgument = command.Argument(
@@ -78,6 +78,7 @@ namespace GOLCore {
                     var world = WorldConverter.FromBitmap(inputPath);
                     // Check configuration
                     var silent = silentOption.HasValue();
+
                     if(!silent && cycleDelayOption.HasValue())
                         cycleDelay = int.Parse(cycleDelayOption.Value());
                     if(maxCycleOption.HasValue())
@@ -85,24 +86,8 @@ namespace GOLCore {
 
                     if(clearOption.HasValue())
                         Console.Clear();
-                    // Cycle logic
-                    var cycleCount = 0;
-                    do {
-                        if(!silent) {
-                            world.WaitFor(cycleDelay)
-                                .Display()
-                                .Jump(displayMargin);
-                            Console.WriteLine("Cycle n°{0}", cycleCount+1);
-                        }
-                        world.Cycle();
-                        world.TriggerCommitCycle();
-                        cycleCount++;
-                    } while(world.CurrentPopulation > 0 && Cell.ChangedStateCount > 0 && cycleCount < maxCycle);
 
-                    if(!silent) {
-                        world.ShowEndScreen()
-                            .Jump(displayMargin);
-                    }
+                    var cycleCount = Play(world, cycleDelay, maxCycle, silent);
 
                     if(cycleCount == maxCycle)
                         Console.WriteLine("This population configuration still holds {0} individuals after {1} cycles.", world.CurrentPopulation, cycleCount);
@@ -114,23 +99,7 @@ namespace GOLCore {
 
                     // If provided output result to path
                     if(outputPathOption.HasValue()) {
-                        // todo: Figure out format from path
-                        var outputPath = Path.GetFullPath(outputPathOption.Value());
-                        var parentDirectory = Path.GetDirectoryName(outputPath);
-
-                        var fileName = Path.GetFileName(outputPath);
-                        var format = WorldConverter.GetImageFormat(outputPath);
-                        
-                        if(fileName == string.Empty) 
-                            fileName = "golCore_output";
-
-                        fileName = Path.ChangeExtension(fileName, format.ToString().ToLower());
-                        outputPath = Path.Combine(parentDirectory, fileName);
-                        
-                        using(var fs = new FileStream(outputPath, FileMode.OpenOrCreate)) {
-                            var image = world.ToBitmap();
-                            image.Save(fs, format);
-                        }
+                        SaveWorld(world, outputPathOption.Value(), cycleCount);                        
                     }
 
                     return 0;
@@ -144,6 +113,51 @@ namespace GOLCore {
             });
 
             return cliApp;
+        }
+
+        private static int Play(World world, int cycleDelay, int maxCycle, bool silent) {
+            // Cycle logic
+            var cycleCount = 0;
+            var displayMargin = 2;
+            
+            do {
+                if(!silent) {
+                    world.WaitFor(cycleDelay)
+                        .Display()
+                        .Jump(displayMargin);
+                    Console.WriteLine("Cycle n°{0}", cycleCount+1);
+                }
+                world.Cycle();
+                world.TriggerCommitCycle();
+                cycleCount++;
+            } while(world.CurrentPopulation > 0 && Cell.ChangedStateCount > 0 && cycleCount < maxCycle);
+
+            if(!silent) {
+                world.ShowEndScreen()
+                    .Jump(displayMargin);
+            }
+            return cycleCount;
+        }
+
+        private static void SaveWorld(World world, string path, int cycleCount) {
+            var outputPath = Path.GetFullPath(path);
+            var parentDirectory = Path.GetDirectoryName(outputPath);
+
+            var fileName = Path.GetFileName(outputPath);
+            var format = WorldConverter.GetImageFormat(outputPath);
+            
+            if(fileName == string.Empty)
+                fileName = String.Format("{0}_{1}",
+                    String.IsNullOrEmpty(world.Name) ? "gol" : world.Name,
+                    cycleCount);
+
+            fileName = Path.ChangeExtension(fileName, format.ToString().ToLower());
+            outputPath = Path.Combine(parentDirectory, fileName);
+            
+            using(var fs = new FileStream(outputPath, FileMode.OpenOrCreate)) {
+                var image = world.ToBitmap();
+                image.Save(fs, format);
+            }
         }
     }
 }

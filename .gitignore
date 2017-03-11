@@ -2,3 +2,5 @@
 [Oo]bj/
 .vscode/
 *.lock.json
+
+outputs/

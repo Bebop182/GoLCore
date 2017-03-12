@@ -1,9 +1,10 @@
 using System;
 using System.Threading;
+using GOLCore.Structures;
 
 namespace GOLCore {
     public static class WorldDisplayExtensions {
-        private static readonly Point displayOrigin;
+        public static readonly Point displayOrigin;
 
         static WorldDisplayExtensions() {
             displayOrigin = new Point(Console.CursorLeft, Console.CursorTop);
@@ -17,7 +18,7 @@ namespace GOLCore {
         }
 
         public static void Print(this World world, Action<Cell> printCell) {
-            Console.SetCursorPosition(displayOrigin.X, displayOrigin.Y);
+            HomeCursor();
 
             for(int i=0; i<world.MaxPopulation; i++) {
                 var cell = world.CellGrid[i];
@@ -27,6 +28,20 @@ namespace GOLCore {
                     Console.CursorLeft = displayOrigin.X;
                 }
                 printCell?.Invoke(cell);
+            }
+        }
+
+        public static void Print(bool[] worldState, Size size, Action<bool> printState) {
+            HomeCursor();
+
+            for(int i=0; i<worldState.Length; i++) {
+                var cell = worldState[i];
+                
+                if(i % size.Width == 0) {
+                    Console.CursorTop++;
+                    Console.CursorLeft = displayOrigin.X;
+                }
+                printState?.Invoke(cell);
             }
         }
 
@@ -49,6 +64,15 @@ namespace GOLCore {
                 nbLine--;
             }
             return world;
+        }
+
+        public static void HomeCursor() {
+            Console.SetCursorPosition(displayOrigin.X, displayOrigin.Y);
+        }
+
+        public static int Clamp(int value, int min, int max) {
+            value = Math.Max(value, min);
+            return Math.Min(value, max);
         }
     }
 }

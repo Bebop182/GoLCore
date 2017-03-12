@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Drawing.Imaging;
 using System.IO;
+using GOLCore.Structures;
 using Microsoft.Extensions.CommandLineUtils;
 
 namespace GOLCore {
@@ -18,8 +20,7 @@ namespace GOLCore {
         {
             // Output configuration
             Console.OutputEncoding = System.Text.Encoding.UTF8;
-            Console.CursorVisible = false;
-
+            
             var cliApp = ConfigureApplication();
             
             cliApp.Execute(args);
@@ -37,12 +38,12 @@ namespace GOLCore {
                 Description="Conway's Game of life in console form, "
                 + "you can load up an image file as the starting configuration "
                 + "and watch it expand or die\nAuthor: Bebop182"};
-            
+
             // Cli main options declaration
             cliApp.HelpOption("-?|-h|--help");
 
             // Cli commands declaration
-            var playCommand = cliApp.Command("play", (command)=>{
+            var playCommand = cliApp.Command("play", (command) => {
                 command.Description = "Run a game of life from an image file.";
                 #region Command options
                 var inputPathArgument = command.Argument(
@@ -72,6 +73,7 @@ namespace GOLCore {
                 #endregion
                 
                 command.OnExecute(() => {
+                    Console.CursorVisible = false;
                     // Check input path
                     var inputPath = Path.GetFullPath(inputPathArgument.Value);
                     // Initialize world
@@ -105,9 +107,54 @@ namespace GOLCore {
                     return 0;
                 });
             }, throwOnUnexpectedArg:false);
+            var editCommand = cliApp.Command("edit", (command) => {
+                Console.CursorVisible = true;
+                var outputPathArgument = command.Argument(
+                    "Output path",
+                    "Path to world save location",
+                    multipleValues:false);
+                var widthOption = command.Option(
+                    "-w|--width",
+                    "Width of the world to be created",
+                    CommandOptionType.SingleValue);
+                var heightOption = command.Option(
+                    "-h|--height",
+                    "Height of the world to be created",
+                    CommandOptionType.SingleValue);
+                
+                command.OnExecute(() => {
+                    // Check output path
+                    var outputPath = Path.GetFullPath(outputPathArgument.Value);
+                    // Check size
+                    Size worldSize = Size.Null;
+                    int
+                        width = 0,
+                        height = 0;
+                    
+                    if(widthOption.HasValue())
+                        int.TryParse(widthOption.Value(), out width);
+                    if(heightOption.HasValue())
+                        int.TryParse(heightOption.Value(), out height);
+                    
+                    if(width <= 0)
+                        width = 20;
+                    if(height <= 0)
+                        height = width;
+
+                    worldSize = new Size(width, height);
+                    var world = Edit(worldSize);
+
+                    using(var image = world.ToBitmap())
+                    using(var fs = new FileStream(outputPath, FileMode.OpenOrCreate)) {
+                        image.Save(fs, ImageFormat.Png);
+                    }
+
+                    return 0;
+                });
+            });
 
             // Cli execution
-            cliApp.OnExecute(()=> {
+            cliApp.OnExecute(() => {
                 playCommand.ShowHelp();
                 return 0;
             });
@@ -137,6 +184,58 @@ namespace GOLCore {
                     .Jump(displayMargin);
             }
             return cycleCount;
+        }
+
+        private static World Edit(Size size) {
+            var worldState = new bool[size.Area()];
+
+            var finishEdit = false;
+
+            // Set Cursor
+            var origin = WorldDisplayExtensions.displayOrigin;
+            
+            // Display world
+            WorldDisplayExtensions.Print(worldState, size, (state)=> {
+                Console.Write(state ? 'O' : '-');
+            });
+            Console.SetCursorPosition(origin.X + size.Width/2, origin.Y + size.Height/2);
+
+            // Read movement keys
+            ConsoleKeyInfo keyPressed;
+            do {
+                keyPressed = Console.ReadKey(true);
+                switch(keyPressed.Key) {
+                    case ConsoleKey.LeftArrow:
+                        if(Console.CursorLeft > 0)
+                            Console.CursorLeft--;
+                        break;
+                    case ConsoleKey.UpArrow:
+                        if(Console.CursorTop > origin.Y+1)
+                            Console.CursorTop--;
+                        break;
+                    case ConsoleKey.RightArrow:
+                        if(Console.CursorLeft < size.Width-1)
+                            Console.CursorLeft++;
+                        break;
+                    case ConsoleKey.DownArrow:
+                        if(Console.CursorTop < origin.Y+size.Height)
+                            Console.CursorTop++;
+                        break;
+                    case ConsoleKey.Enter:
+                        var index = Console.CursorLeft + (Console.CursorTop - origin.Y)*size.Width;
+                        worldState[index] = !worldState[index];
+                        Console.Write(worldState[index] ? 'O' : '-');
+                        Console.CursorLeft--;
+                        break;
+                    case ConsoleKey.Escape:
+                        finishEdit = true;
+                        Console.SetCursorPosition(0, origin.Y + size.Height);
+                        break;
+                }
+            }
+            while(!finishEdit);
+
+            return new World(worldState, size);
         }
 
         private static void SaveWorld(World world, string path, int cycleCount) {

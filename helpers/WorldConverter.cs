@@ -17,8 +17,8 @@ namespace GOLCore
 
             var world = new World(worldState, image.Width, image.Height);
             world.Name = String.IsNullOrEmpty(name) ? String.Empty : name;
+
             image.Dispose();
-            
             return world;
         }
 

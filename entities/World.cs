@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using GOLCore.Structures;
 
 namespace GOLCore {
     public class World {
@@ -26,6 +27,9 @@ namespace GOLCore {
             }).ToArray();
 
             CellGrid = new ReadOnlyCollection<Cell>(grid);
+        }
+
+        public World(bool[] worldState, Size size) : this(worldState, size.Width, size.Height) {
         }
 
         public void Cycle() {

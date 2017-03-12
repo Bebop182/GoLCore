@@ -1,4 +1,4 @@
-namespace GOLCore {
+namespace GOLCore.Structures {
     public struct Point {
         public int X {get; private set;}
         public int Y {get; private set;}

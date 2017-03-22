@@ -6,7 +6,6 @@ using Microsoft.Extensions.CommandLineUtils;
 
 namespace GOLCore {
     //todo: error handling
-    //todo: Editor command
     //todo: write/load all settings to/from a config file
     //todo: add interactivity to a world cycle
     //todo: i18n
@@ -70,6 +69,7 @@ namespace GOLCore {
                     "-c|--clear",
                     "Clear console output to only display world",
                     CommandOptionType.NoValue);
+                command.HelpOption("-?|-h|--help");
                 #endregion
                 
                 command.OnExecute(() => {
@@ -108,19 +108,21 @@ namespace GOLCore {
                 });
             }, throwOnUnexpectedArg:false);
             var editCommand = cliApp.Command("edit", (command) => {
+                command.Description = "Allows you to create and edit image file to be used as starting configuration in the play command.";
                 Console.CursorVisible = true;
                 var outputPathArgument = command.Argument(
                     "Output path",
                     "Path to world save location",
                     multipleValues:false);
                 var widthOption = command.Option(
-                    "-w|--width",
+                    "-x|--width",
                     "Width of the world to be created",
                     CommandOptionType.SingleValue);
                 var heightOption = command.Option(
-                    "-h|--height",
+                    "-y|--height",
                     "Height of the world to be created",
                     CommandOptionType.SingleValue);
+                command.HelpOption("-?|-h|--help");
                 
                 command.OnExecute(() => {
                     // Check output path
@@ -155,7 +157,8 @@ namespace GOLCore {
 
             // Cli execution
             cliApp.OnExecute(() => {
-                playCommand.ShowHelp();
+                cliApp.ShowHelp();
+
                 return 0;
             });
 

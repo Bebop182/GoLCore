@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing.Imaging;
 using System.IO;
 using GOLCore.Structures;
@@ -19,13 +20,20 @@ namespace GOLCore {
         {
             // Output configuration
             Console.OutputEncoding = System.Text.Encoding.UTF8;
-            
-            var cliApp = ConfigureApplication();
-            
+            List<Exception> warnings;
+            var cliApp = ConfigureApplication(out warnings);
+
             cliApp.Execute(args);
+
+            Console.WriteLine();
+            foreach(var exception in warnings) {
+                Console.WriteLine("!!! " + exception.Message);
+            }
         }
 
-        private static CommandLineApplication ConfigureApplication() {
+        private static CommandLineApplication ConfigureApplication(out List<Exception> warningOutputs) {
+            var warnings = new List<Exception>();
+
             // Application settings
             var cycleDelay = 500;
             var maxCycle = 2000;
@@ -42,49 +50,67 @@ namespace GOLCore {
             cliApp.HelpOption("-?|-h|--help");
 
             // Cli commands declaration
-            var playCommand = cliApp.Command("play", (command) => {
-                command.Description = "Run a game of life from an image file.";
+            var playCommand = cliApp.Command("play", (playcmd) => {
+                playcmd.Description = "Run a game of life from an image file.";
                 #region Command options
-                var inputPathArgument = command.Argument(
+                var inputPathArgument = playcmd.Argument(
                     "Input path",
                     "Path to an image file to be used as starting world configuration",
                     multipleValues:false);
-                var outputPathOption = command.Option(
+                var outputPathOption = playcmd.Option(
                     "-o|--output-path",
                     "Path to the desired save location of the output image",
                     CommandOptionType.SingleValue);
-                var cycleDelayOption = command.Option(
+                var cycleDelayOption = playcmd.Option(
                     "-d|--delay",
                     "Define the delay in millisecond between each cycle",
                     CommandOptionType.SingleValue);
-                var maxCycleOption = command.Option(
+                var maxCycleOption = playcmd.Option(
                     "-m|--max-cycle",
                     "Define the limit of cycle to process",
                     CommandOptionType.SingleValue);
-                var silentOption = command.Option(
+                var silentOption = playcmd.Option(
                     "-s|--silent",
                     "Disable world output to display and ignore cycle delay option",
                     CommandOptionType.NoValue);
-                var clearOption = command.Option(
+                var clearOption = playcmd.Option(
                     "-c|--clear",
                     "Clear console output to only display world",
                     CommandOptionType.NoValue);
-                command.HelpOption("-?|-h|--help");
+                playcmd.HelpOption("-?|-h|--help");
                 #endregion
                 
-                command.OnExecute(() => {
+                playcmd.OnExecute(() => {
                     Console.CursorVisible = false;
-                    // Check input path
-                    var inputPath = Path.GetFullPath(inputPathArgument.Value);
-                    // Initialize world
-                    var world = WorldConverter.FromBitmap(inputPath);
+                    string inputPath = String.Empty;
+                    World world = null;
+                    try {
+                        // Check input path
+                        inputPath = Path.GetFullPath(inputPathArgument.Value);
+                        // Initialize world
+                        world = WorldConverter.FromBitmap(inputPath);
+                    }
+                    catch(Exception e) {
+                        warnings.Add(e);
+                        playcmd.ShowHelp();
+                        return -2;
+                    }
+
                     // Check configuration
                     var silent = silentOption.HasValue();
 
-                    if(!silent && cycleDelayOption.HasValue())
-                        cycleDelay = int.Parse(cycleDelayOption.Value());
-                    if(maxCycleOption.HasValue())
-                        maxCycle = int.Parse(maxCycleOption.Value());
+                    try {
+                        if(!silent && cycleDelayOption.HasValue())
+                            cycleDelay = int.Parse(cycleDelayOption.Value());
+                        if(maxCycleOption.HasValue())
+                            maxCycle = int.Parse(maxCycleOption.Value());
+                    }
+                    catch(Exception e) {
+                        warnings.Add(e);
+                        //playcmd.ShowHelp();
+                        //return -2;
+                    }
+                    
 
                     if(clearOption.HasValue())
                         Console.Clear();
@@ -100,43 +126,57 @@ namespace GOLCore {
                     }
 
                     // If provided output result to path
-                    if(outputPathOption.HasValue()) {
+                    if(!outputPathOption.HasValue()) return 0;
+
+                    try{
                         SaveWorld(world, outputPathOption.Value(), cycleCount);                        
+                    }
+                    catch(Exception e) {
+                        warnings.Add(e);
                     }
 
                     return 0;
                 });
             }, throwOnUnexpectedArg:false);
-            var editCommand = cliApp.Command("edit", (command) => {
-                command.Description = "Allows you to create and edit image file to be used as starting configuration in the play command.";
+            var editCommand = cliApp.Command("edit", (editcmd) => {
+                editcmd.Description = "Allows you to create and edit image file to be used as starting configuration in the play command.";
                 Console.CursorVisible = true;
-                var outputPathArgument = command.Argument(
+                var outputPathArgument = editcmd.Argument(
                     "Output path",
                     "Path to world save location",
                     multipleValues:false);
-                var widthOption = command.Option(
+                var widthOption = editcmd.Option(
                     "-x|--width",
                     "Width of the world to be created",
                     CommandOptionType.SingleValue);
-                var heightOption = command.Option(
+                var heightOption = editcmd.Option(
                     "-y|--height",
                     "Height of the world to be created",
                     CommandOptionType.SingleValue);
-                command.HelpOption("-?|-h|--help");
+                editcmd.HelpOption("-?|-h|--help");
                 
-                command.OnExecute(() => {
-                    // Check output path
-                    var outputPath = Path.GetFullPath(outputPathArgument.Value);
+                editcmd.OnExecute(() => {
+                    string outputPath = String.Empty;
+                    try {
+                        // Check output path
+                        outputPath = Path.GetFullPath(outputPathArgument.Value);
+                    }
+                    catch(Exception e) {
+                        warnings.Add(e);
+                        editcmd.ShowHelp();
+                        return -1;
+                    }
+                    
                     // Check size
                     Size worldSize = Size.Null;
                     int
                         width = 0,
                         height = 0;
                     
-                    if(widthOption.HasValue())
-                        int.TryParse(widthOption.Value(), out width);
-                    if(heightOption.HasValue())
-                        int.TryParse(heightOption.Value(), out height);
+                    if(!(widthOption.HasValue() && int.TryParse(widthOption.Value(), out width)))
+                        warnings.Add(new ArgumentException("! Specify width using -x, defaulting..."));
+                    if(!(heightOption.HasValue() && int.TryParse(heightOption.Value(), out height)))
+                        warnings.Add(new ArgumentException("! Specify height using -y, defaulting..."));
                     
                     if(width <= 0)
                         width = 20;
@@ -146,9 +186,14 @@ namespace GOLCore {
                     worldSize = new Size(width, height);
                     var world = Edit(worldSize);
 
-                    using(var image = world.ToBitmap())
-                    using(var fs = new FileStream(outputPath, FileMode.OpenOrCreate)) {
-                        image.Save(fs, ImageFormat.Png);
+                    try{
+                        using(var image = world.ToBitmap())
+                        using(var fs = new FileStream(outputPath, FileMode.OpenOrCreate)) {
+                            image.Save(fs, ImageFormat.Png);
+                        }
+                    } catch(Exception e) {
+                        warnings.Add(e);
+                        return -1;
                     }
 
                     return 0;
@@ -161,6 +206,8 @@ namespace GOLCore {
 
                 return 0;
             });
+
+            warningOutputs = warnings;
 
             return cliApp;
         }

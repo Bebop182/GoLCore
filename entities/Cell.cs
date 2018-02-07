@@ -1,54 +1,74 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 
 namespace GOLCore {
     public class Cell {
-        private bool _state;
-        public bool StagedState {get; private set;}
-        public bool IsAlive => _state;
+        private bool _currentState;
+        private bool _nextState;
+        private bool _isAwake;
 
-        private bool _isAwake = true;
         public bool IsAwake {
-            get {
-                return _isAwake || IsAlive;
-            }
-            set {
-                _isAwake = value;
-            }
+            get { return _isAwake || IsAlive; }
+            set { _isAwake = value; }
         }
+        public bool IsAlive => _currentState;
+        public bool Evolved { get; private set; }
+
+        public List<Cell> Neighbors;
 
         public Cell(bool initState = false)
         {
-            _state = initState;
-            StagedState = _state;
+            _nextState = initState;
+            _currentState = _nextState;
         }
 
-        public void ProcessCycle(int aliveNeighborCount) {
-            StagedState = _state;
+        public void OnCycleStart() {
+            Evolved = false;
+            if(IsAlive)
+                WakeNeighbors(true);
+        }
+
+        public void OnProcessCycle() {
+            if(!IsAwake) return;
+
+            var aliveNeighborCount = Neighbors.Count(c=>c.IsAlive);
             
             if(!IsAlive) {
                 //Birth conditions            
                 if(aliveNeighborCount == 3) {
-                    StagedState = true;
+                    _nextState = true;
                     return;
                 }
             }
             else {
                 //Death conditions
                 if(aliveNeighborCount > 3){
-                    StagedState = false;
+                    _nextState = false;
                     return;
                 }
                 if(aliveNeighborCount <= 1){
-                    StagedState = false;
+                    _nextState = false;
                     return;
                 }
             }
         }
 
-        public void Commit() {
-            //if(!IsAwake) return;
-            _state = StagedState;
+        public void OnCycleEnd() {
+            if(!IsAwake) return;
+
+            if(_nextState != _currentState) {
+                _currentState = _nextState;
+                Evolved = true;
+            }
+
+            IsAwake = false;
+        }
+
+        private void WakeNeighbors(bool wake) {
+            foreach(var neighbor in Neighbors) {
+                neighbor.IsAwake = wake;
+            }
         }
     }
 }

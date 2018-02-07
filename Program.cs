@@ -228,7 +228,7 @@ namespace GOLCore {
                 world.Cycle();
                 
                 cycleCount++;
-            } while(world.CurrentPopulation > 0 && cycleCount < maxCycle);
+            } while(world.CurrentPopulation > 0 && cycleCount < maxCycle && world.CycleChangeCount > 0);
             // todo: Add stop when no changes
 
             if(!silent) {

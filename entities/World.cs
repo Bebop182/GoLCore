@@ -6,19 +6,19 @@ using GOLCore.Structures;
 
 namespace GOLCore {
     public class World {
-        private Action CycleCommit = delegate {};
+        private Action CycleStart, CycleProcess, CycleEnd;
 
         public string Name {get; set;}
         public uint Age {get; private set;}
-
         public readonly int Width;
         public readonly int Height;
         public readonly ReadOnlyCollection<Cell> CellGrid;
-        // Store precomputed cells coordinates
+        // Cache cells coordinates
         public readonly Dictionary<Cell, Point> CellsCoordinates;
         
         public int MaxPopulation => CellGrid.Count;
         public int CurrentPopulation => CellGrid.Count(c=>c.IsAlive);
+        public int CycleChangeCount => CellGrid.Count(c=>c.Evolved);
 
         public World(bool[] worldState, int width = 0, int height = 0) {
             Name = String.Empty;
@@ -28,21 +28,30 @@ namespace GOLCore {
 
             CellsCoordinates = new Dictionary<Cell, Point>();
 
-            var grid = worldState.Select((state, index) => {
+            var cells = worldState.Select((state, index) => {
                 var cell = new Cell(state);
 
                 // Find coordinates in the grid
                 var x = index % Width;
                 var y = index / Width;
 
+                // Cache coordinates
                 CellsCoordinates.Add(cell, new Point(x, y));
 
-                CycleCommit += cell.Commit;
+                CycleStart += cell.OnCycleStart;
+                CycleProcess += cell.OnProcessCycle;
+                CycleEnd += cell.OnCycleEnd;
                 
                 return cell;
-            }).ToArray();
+            }).ToList();
 
-            CellGrid = new ReadOnlyCollection<Cell>(grid);
+            CellGrid = new ReadOnlyCollection<Cell>(cells);
+
+            // Cache neighbors
+            foreach(var cell in cells) {
+                var n = GetNeighbors(CellsCoordinates[cell]);
+                cell.Neighbors = n;
+            }
         }
 
         public World (int width, int height) : this(new bool[width*height], width, height) {
@@ -52,53 +61,54 @@ namespace GOLCore {
         }
 
         public void Cycle() {
-            // var cells = CellGrid
-            // .Where(c=> c.IsAlive || c.IsAwake)
-            // .Select(c => {c.IsAwake = false; return c;})
-            // .ToList();
+            TriggerCycleStart();
 
-            var cells = CellGrid;
+            TriggerCycleProcess();
 
-            Console.WriteLine("Population {0} / Awake {1}", CurrentPopulation, cells.Count);
+            TriggerCycleEnd();
 
-            foreach(var cell in cells) {
-                var coord = CellsCoordinates[cell];
-                var neighbors = GetNeighbors(coord.X, coord.Y);
-                cell.ProcessCycle(aliveNeighborCount:neighbors.Count(n=>n.IsAlive));
-
-                // If cell is alive next cycle, awake neighbors
-                /*if(cell.StagedState)
-                    neighbors.Select( n => {n.IsAwake = true; return n;} );*/
-            }
-
-            CycleCommit();
+            //Console.WriteLine("Population {0} / Awake {1}", CurrentPopulation, cells.Count);
 
             Age++;
         }
 
         private List<Cell> GetNeighbors(int xPosition, int yPosition, int range = 1) {
+            var neighbors = new List<Cell>();
+            
             int
                 xStart = Math.Max(xPosition - range, 0),
                 xEnd = Math.Min(xPosition + range, Width-1),
                 yStart = Math.Max(yPosition - range, 0),
                 yEnd = Math.Min(yPosition + range, Height-1);
-            var neighbors = new List<Cell>();
-            var cell = CellGrid[xPosition + yPosition*Width];
+            //var cell = CellGrid[xPosition + yPosition*Width];
                 
             for(int y = yStart; y <= yEnd; y++) {
                 for(int x = xStart; x <= xEnd; x++) {
                     if(x == xPosition && y == yPosition) continue;
 
                     var index = x + y*Width;
-                    neighbors.Add(CellGrid[index]);
+                    var cell = CellGrid[index];
+                    neighbors.Add(cell);
                 }
             }
 
             return neighbors;
         }
 
-        public void TriggerCycleCommit() {
-            CycleCommit?.Invoke();
+        private List<Cell> GetNeighbors(Point coordinates, int range = 1) {
+            return GetNeighbors(coordinates.X, coordinates.Y, range);
+        }
+
+        public void TriggerCycleStart() {
+            CycleStart?.Invoke();
+        }
+
+        public void TriggerCycleProcess() {
+            CycleProcess?.Invoke();
+        }
+
+        public void TriggerCycleEnd() {
+            CycleEnd?.Invoke();
         }
     }
 }

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing.Imaging;
 using System.IO;
 using GOLCore.Structures;
 using Microsoft.Extensions.CommandLineUtils;
@@ -88,7 +87,7 @@ namespace GOLCore {
                         // Check input path
                         inputPath = Path.GetFullPath(inputPathArgument.Value);
                         // Initialize world
-                        world = WorldConverter.FromBitmap(inputPath);
+                        world = WorldHelper.Import(inputPath);
                     }
                     catch(Exception e) {
                         warnings.Add(e);
@@ -129,7 +128,7 @@ namespace GOLCore {
                     if(!outputPathOption.HasValue()) return 0;
 
                     try{
-                        SaveWorld(world, outputPathOption.Value(), cycleCount);                        
+                        SaveWorld(world, outputPathOption.Value());                        
                     }
                     catch(Exception e) {
                         warnings.Add(e);
@@ -141,6 +140,7 @@ namespace GOLCore {
             var editCommand = cliApp.Command("edit", (editcmd) => {
                 editcmd.Description = "Allows you to create and edit image file to be used as starting configuration in the play command.";
                 Console.CursorVisible = true;
+                
                 var outputPathArgument = editcmd.Argument(
                     "Output path",
                     "Path to world save location",
@@ -187,10 +187,11 @@ namespace GOLCore {
                     var world = Edit(worldSize);
 
                     try{
-                        using(var image = world.ToBitmap())
-                        using(var fs = new FileStream(outputPath, FileMode.OpenOrCreate)) {
-                            image.Save(fs, ImageFormat.Png);
-                        }
+                        // using(var image = world.ToBitmap())
+                        // using(var fs = new FileStream(outputPath, FileMode.OpenOrCreate)) {
+                        //     image.Save(fs, ImageFormat.Png);
+                        // }
+                        WorldHelper.Export(world, outputPath);
                     } catch(Exception e) {
                         warnings.Add(e);
                         return -1;
@@ -225,9 +226,10 @@ namespace GOLCore {
                     Console.WriteLine("Cycle n°{0}", cycleCount+1);
                 }
                 world.Cycle();
-                world.TriggerCommitCycle();
+                
                 cycleCount++;
-            } while(world.CurrentPopulation > 0 && Cell.ChangedStateCount > 0 && cycleCount < maxCycle);
+            } while(world.CurrentPopulation > 0 && cycleCount < maxCycle);
+            // todo: Add stop when no changes
 
             if(!silent) {
                 world.ShowEndScreen()
@@ -287,26 +289,31 @@ namespace GOLCore {
 
             return new World(worldState, size);
         }
-
-        private static void SaveWorld(World world, string path, int cycleCount) {
+        private static void SaveWorld(World world, string path) {
             var outputPath = Path.GetFullPath(path);
             var parentDirectory = Path.GetDirectoryName(outputPath);
 
             var fileName = Path.GetFileName(outputPath);
-            var format = WorldConverter.GetImageFormat(outputPath);
+            var format = "png";
             
-            if(fileName == string.Empty)
-                fileName = String.Format("{0}_{1}",
+            // Generate filename if not provided
+            if(fileName == string.Empty) {
+                fileName = String.Format("{0}_{1}.{2}",
                     String.IsNullOrEmpty(world.Name) ? "gol" : world.Name,
-                    cycleCount);
-
-            fileName = Path.ChangeExtension(fileName, format.ToString().ToLower());
-            outputPath = Path.Combine(parentDirectory, fileName);
-            
-            using(var fs = new FileStream(outputPath, FileMode.OpenOrCreate)) {
-                var image = world.ToBitmap();
-                image.Save(fs, format);
+                    world.Age,
+                    format);
             }
+
+            // Save file
+            WorldHelper.Export(world, outputPath);
+
+            // fileName = Path.ChangeExtension(fileName, format.ToString().ToLower());
+            // outputPath = Path.Combine(parentDirectory, fileName);
+            
+            // using(var fs = new FileStream(outputPath, FileMode.OpenOrCreate)) {
+            //     var image = world.ToBitmap();
+            //     image.Save(fs, format);
+            // }
         }
     }
 }

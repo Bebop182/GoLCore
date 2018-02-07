@@ -23,7 +23,7 @@ namespace GOLCore {
             for(int i=0; i<world.MaxPopulation; i++) {
                 var cell = world.CellGrid[i];
                 
-                if(i % world.XResolution == 0) {
+                if(i % world.Width == 0) {
                     Console.CursorTop++;
                     Console.CursorLeft = displayOrigin.X;
                 }

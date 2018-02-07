@@ -1,5 +1,5 @@
 public class GOLCoreSettings {
-    public int CycleDelay {get; set;}
+    public int CycleRate {get; set;}
     public readonly char aliveSymbol;
     public readonly char deadSymbol;
     

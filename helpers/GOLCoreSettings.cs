@@ -11,4 +11,10 @@ namespace GOLCore {
         }
     }
 
+    public class RuleSet : Singleton<RuleSet> {
+        public int OverPopulationThreshold = 4; // default: 4
+        public int IsolationThreshold = 1; // default: 1
+        public int ParentsRequired = 3; // default: 3
+        public int ProximityRange = 1; // default: 1
+    }
 }

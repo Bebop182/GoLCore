@@ -100,8 +100,8 @@ namespace GOLCore {
             return neighbors;
         }
 
-        private List<Cell> GetNeighbors(Point coordinates, int range = 1) {
-            return GetNeighbors(coordinates.X, coordinates.Y, range);
+        private List<Cell> GetNeighbors(Point coordinates) {
+            return GetNeighbors(coordinates.X, coordinates.Y, RuleSet.Instance.ProximityRange);
         }
 
         public void TriggerCycleStart() {

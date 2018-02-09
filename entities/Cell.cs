@@ -33,21 +33,22 @@ namespace GOLCore {
             if(!IsAwake) return;
 
             var aliveNeighborCount = Neighbors.Count(c=>c.IsAlive);
+            var conditions = RuleSet.Instance;
             
             if(!IsAlive) {
                 //Birth conditions            
-                if(aliveNeighborCount == 3) {
+                if(aliveNeighborCount == conditions.ParentsRequired) {
                     _nextState = true;
                     return;
                 }
             }
             else {
                 //Death conditions
-                if(aliveNeighborCount >= 4){
+                if(aliveNeighborCount >= conditions.OverPopulationThreshold) {
                     _nextState = false;
                     return;
                 }
-                if(aliveNeighborCount <= 1){
+                if(aliveNeighborCount <= conditions.IsolationThreshold) {
                     _nextState = false;
                     return;
                 }

@@ -46,9 +46,10 @@ namespace GOLCore {
         }
 
         public static World ShowEndScreen(this World world) {
+            var step = (int)Math.Clamp(2000/(float)world.MaxPopulation, 1f, float.MaxValue);
             world.Print(c=>{
                 Console.Write('#');
-                Thread.Sleep(8);
+                Thread.Sleep(step);
             });
             return world;
         }

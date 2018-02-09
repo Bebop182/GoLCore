@@ -10,8 +10,10 @@ namespace GOLCore {
 
         public string Name {get; set;}
         public uint Age {get; private set;}
-        public readonly int Width;
-        public readonly int Height;
+
+        public Size Size {get;}
+        public int Width => Size.Width;
+        public int Height => Size.Height;
         public readonly ReadOnlyCollection<Cell> CellGrid;
         // Cache cells coordinates
         public readonly Dictionary<Cell, Point> CellsCoordinates;
@@ -19,12 +21,15 @@ namespace GOLCore {
         public int MaxPopulation => CellGrid.Count;
         public int CurrentPopulation => CellGrid.Count(c=>c.IsAlive);
         public int CycleChangeCount => CellGrid.Count(c=>c.Evolved);
+        public bool[] WorldState => CellGrid.Select(c=>c.IsAlive).ToArray();
 
-        public World(bool[] worldState, int width = 0, int height = 0) {
+        public World(bool[] worldState, int width, int height) {
+            width = Math.Clamp(width, 0, int.MaxValue);
+            height = Math.Clamp(height, 0, int.MaxValue);
+
+            Size = new Size(width, height);
             Name = String.Empty;
-            Age = 1;
-            Width = width > 0 ? width : (int)Math.Sqrt(worldState.Length);
-            Height = height > 0 ? height : Width;
+            Age = 0;         
 
             CellsCoordinates = new Dictionary<Cell, Point>();
 

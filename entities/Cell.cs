@@ -43,7 +43,7 @@ namespace GOLCore {
             }
             else {
                 //Death conditions
-                if(aliveNeighborCount > 3){
+                if(aliveNeighborCount >= 4){
                     _nextState = false;
                     return;
                 }

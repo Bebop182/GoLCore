@@ -137,6 +137,7 @@ namespace GOLCore {
                     return 0;
                 });
             }, throwOnUnexpectedArg:false);
+
             var editCommand = cliApp.Command("edit", (editcmd) => {
                 editcmd.Description = "Allows you to create and edit image file to be used as starting configuration in the play command.";
                 Console.CursorVisible = true;
@@ -167,7 +168,7 @@ namespace GOLCore {
                         return -1;
                     }
                     
-                    // Check size
+                    // Check size options
                     Size worldSize = Size.Null;
                     int
                         width = 0,
@@ -181,16 +182,19 @@ namespace GOLCore {
                     if(width <= 0)
                         width = 20;
                     if(height <= 0)
-                        height = width;
+                        height = width/2;
 
-                    worldSize = new Size(width, height);
-                    var world = Edit(worldSize);
+                    // Try to load
+                    World world;
+                    try {
+                        world = WorldHelper.Import(outputPath);
+                    } catch {
+                        world = new World(width, height);
+                    }
+
+                    world = Edit(world);
 
                     try{
-                        // using(var image = world.ToBitmap())
-                        // using(var fs = new FileStream(outputPath, FileMode.OpenOrCreate)) {
-                        //     image.Save(fs, ImageFormat.Png);
-                        // }
                         WorldHelper.Export(world, outputPath);
                     } catch(Exception e) {
                         warnings.Add(e);
@@ -238,8 +242,8 @@ namespace GOLCore {
             return cycleCount;
         }
 
-        private static World Edit(Size size) {
-            var worldState = new bool[size.Area()];
+        private static World Edit(World world) {
+            var worldState = world.WorldState;
 
             var finishEdit = false;
 
@@ -247,10 +251,10 @@ namespace GOLCore {
             var origin = WorldDisplayExtensions.displayOrigin;
             
             // Display world
-            WorldDisplayExtensions.Print(worldState, size, (state)=> {
+            WorldDisplayExtensions.Print(worldState, world.Size, (state)=> {
                 Console.Write(state ? 'O' : '-');
             });
-            Console.SetCursorPosition(origin.X + size.Width/2, origin.Y + size.Height/2);
+            Console.SetCursorPosition(origin.X + world.Width/2, origin.Y + world.Height/2);
 
             // Read movement keys
             ConsoleKeyInfo keyPressed;
@@ -266,28 +270,28 @@ namespace GOLCore {
                             Console.CursorTop--;
                         break;
                     case ConsoleKey.RightArrow:
-                        if(Console.CursorLeft < size.Width-1)
+                        if(Console.CursorLeft < world.Width-1)
                             Console.CursorLeft++;
                         break;
                     case ConsoleKey.DownArrow:
-                        if(Console.CursorTop < origin.Y+size.Height)
+                        if(Console.CursorTop < origin.Y+world.Height)
                             Console.CursorTop++;
                         break;
                     case ConsoleKey.Enter:
-                        var index = Console.CursorLeft + (Console.CursorTop - origin.Y)*size.Width;
+                        var index = Console.CursorLeft + (Console.CursorTop-1 - origin.Y) * world.Width;
                         worldState[index] = !worldState[index];
                         Console.Write(worldState[index] ? 'O' : '-');
                         Console.CursorLeft--;
                         break;
                     case ConsoleKey.Escape:
                         finishEdit = true;
-                        Console.SetCursorPosition(0, origin.Y + size.Height);
+                        Console.SetCursorPosition(0, origin.Y + world.Height);
                         break;
                 }
             }
             while(!finishEdit);
 
-            return new World(worldState, size);
+            return new World(worldState, world.Size);
         }
         private static void SaveWorld(World world, string path) {
             var outputPath = Path.GetFullPath(path);
